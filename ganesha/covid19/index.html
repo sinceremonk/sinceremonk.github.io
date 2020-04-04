@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style> /* set the CSS */
+
+.line {
+  fill: none;
+  stroke: steelblue;
+  stroke-width: 2px;
+}
+
+.axisSteelBlue text{
+  fill: steelblue;
+}
+
+.axisRed text{
+  fill: red;
+}
+
+/* Style the dots by assigning a fill and stroke */
+.dotblue {
+     fill: none;
+  stroke: steelblue;
+}
+.dotred {
+     fill: none;
+  stroke: red;
+}
+  
+  .focus circle {
+  fill: none;
+  stroke: black;
+}
+</style>
+<body>
+
+<!-- load the d3.js library -->    	
+<script src="https://d3js.org/d3.v4.min.js"></script>
+<script>
+
+// set the dimensions and margins of the graph
+var margin = {top: 20, right: 100, bottom: 100, left: 100},
+    width = 1000 - margin.left - margin.right,
+    height = 600 - margin.top - margin.bottom,
+	padding=-100;
+
+// parse the date / time
+var parseTime = d3.timeParse("%d %B ");
+var formatTime = d3.timeFormat('%d %B')
+// set the ranges
+var x = d3.scaleTime().range([0, width]);
+var y0 = d3.scaleLinear().range([height, 0]);
+var y1 = d3.scaleLinear().range([height, 0]);
+
+const xaxis = d3.axisBottom()
+    .ticks(10)
+    .tickFormat(d3.timeFormat('%d %B'))
+    .scale(x);
+	
+// define the 1st line
+var valueline = d3.line()
+    .x((d) => x(d.date))
+    .y((d) => y0(d.totalConfirmed));
+
+// define the 2nd line
+var valueline2 = d3.line()
+    .x((d) => x(d.date))
+    .y((d) => y1(d.dailyconfirmed));
+
+// append the svg obgect to the body of the page
+// appends a 'group' element to 'svg'
+// moves the 'group' element to the top left margin
+var svg = d3.select("body").append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+  .append("g")
+    .attr("transform",
+          "translate(" + margin.left + "," + margin.top + ")");
+
+// Get the data
+d3.json("https://api.covid19india.org/data.json", (error, data) => {
+  if (error) throw error;
+
+  // format the data
+  timeSeriesData=data.cases_time_series;
+  timeSeriesData.forEach((d) => {
+      d.date = parseTime(d.date);
+      d.totalConfirmed = +d.totalconfirmed;
+      d.dailyconfirmed = +d.dailyconfirmed;
+	 
+	  
+	  
+  });
+  console.log(timeSeriesData);
+
+  // Scale the range of the data
+  var dateExtent=d3.extent(timeSeriesData, d => d.date);
+  x.domain(d3.extent(timeSeriesData, d => d.date));
+  y0.domain([0, d3.max(timeSeriesData, d => Math.max(d.totalConfirmed))]);
+  y1.domain([0, d3.max(timeSeriesData, d => Math.max(d.dailyconfirmed))]);
+
+  // Add the valueline path.
+  svg.append("path")
+      .data([timeSeriesData])
+      .attr("class", "line")
+      .attr("d", valueline);
+
+  // Add the valueline2 path.
+  svg.append("path")
+      .data([timeSeriesData])
+      .attr("class", "line")
+      .style("stroke", "red")
+      .attr("d", valueline2);
+
+
+  // Add the X Axis
+  x_text_g=svg.append("g")
+  .attr("class", "xaxis axis")
+      .attr("transform", "translate(0," + height + ")")
+      <!-- .call(d3.axisBottom(x)); -->
+      .call(xaxis);
+	  
+	  x_text_g.selectAll(".xaxis text")  // select all the text elements for the xaxis
+          .attr("transform", function(d) {
+             return "translate(" + (this.getBBox().height*-2 + 10) + "," + (this.getBBox().height+30) + ")rotate(-45)";
+         });
+	  
+
+  // Add the Y0 Axis
+  svg.append("g")
+      .attr("class", "axisSteelBlue")
+      .call(d3.axisLeft(y0));
+
+  // Add the Y1 Axis
+  svg.append("g")
+      .attr("class", "axisRed")
+      .attr("transform", "translate( " + width + ", 0 )")
+      .call(d3.axisRight(y1));
+	  
+	  svg.selectAll(".dot")
+    .data(timeSeriesData)
+  .enter().append("circle") // Uses the enter().append() method
+    .attr("class", "dot") // Assign a class for styling
+    .attr("cx", function(d, i) { return x(d.date) })
+    .attr("cy", function(d) { return y0(d.totalConfirmed) })
+    .attr("r", 2)
+      .on("mouseover", function(a, b, c) { 
+  			
+      
+		}) 
+		
+		svg.selectAll(".dota")
+    .data(timeSeriesData)
+  .enter().append("circle") // Uses the enter().append() method
+    .attr("class", "dot") // Assign a class for styling
+    .attr("cx", function(d, i) {return x(d.date) })
+    .attr("cy", function(d) { return y1(d.dailyconfirmed) })
+    .attr("r", 2)
+      .on("mouseover", function(a, b, c) { 
+  			
+		})
+	  
+	  //adding labels/////////////////////////////////////////
+	  
+	      svg.append("text")
+            .attr("text-anchor", "middle")  
+            .attr("transform", "translate("+ (padding/2) +","+(height/2)+")rotate(-90)")  
+            .text("Total number of Death(s) till Date"); 
+			
+			svg.append("text")
+            .attr("text-anchor", "middle")  
+            .attr("transform", "translate("+ (width+(padding)+margin.right+50) +","+(height/2)+")rotate(-90)")  
+            .text("Total number of Death(s) Daily");
+
+        svg.append("text")
+            .attr("text-anchor", "middle")  
+            .attr("transform", "translate("+ (width/2) +","+(height-(padding))+")")  // centre below axis
+            .text("Date");
+			
+			svg.append("text")
+            <!-- .attr("text-anchor", "middle")   -->
+            .attr("transform", function(d) {
+             return "translate(" + (-30)+ "," + (height+margin.bottom) + ")rotate(-45)";})
+            .text(formatTime(dateExtent[0]));
+			
+			svg.append("text")
+            <!-- .attr("text-anchor", "middle")   -->
+            .attr("transform", function(d) {
+             return "translate(" + width+ "," + (height+margin.bottom-25) + ")rotate(-45)";})
+            .text(formatTime(dateExtent[1]));
+			
+			var legendData=[{"color": "red", "seriesName": "Total number of Death(s) Daily"},{"color": "blue", "seriesName": "Total number of Death(s) till Date"}]
+			
+			var legendX = svg.append("g");
+			legend=legendX.selectAll('g')
+      .data(legendData)
+      .enter()
+      .append('g')
+      .attr('class', 'legend');
+
+    legend.append('rect')
+      .attr('x', width /2)
+      .attr('y', function(d, i) {
+        return i * 30;
+      })
+      .attr('width', 10)
+      .attr('height', 10)
+      .style('fill', function(d) {
+        return (d.color);
+      });
+
+    legend.append('text')
+      .attr('x', (width /2 +15))
+      .attr('y', function(d, i) {
+        return (i * 30) + 9;
+      })
+      .text(function(d) {
+        return d.seriesName;
+      });
+
+});
+
+</script>
+</body>
